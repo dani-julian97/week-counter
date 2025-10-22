@@ -2,117 +2,294 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Week Counter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Habit Tracker</title>
 
-<!-- PWA bits -->
+<!-- PWA bits (keep your manifest + service worker files as before) -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#007aff">
+<meta name="theme-color" content="#0a84ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
 <style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, system-ui, sans-serif;
-    background: #f7f9fc;
-    margin: 0;
-    padding: 1rem;
-    text-align: center;
+  :root{
+    --bg: #0b1220;
+    --bg-soft: #0f1a2f;
+    --card: #121b31;
+    --card-2: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+    --text: #e8eef9;
+    --muted: #9fb0c9;
+    --primary: #0a84ff;
+    --primary-2: #3aa0ff;
+    --danger: #ff3b30;
+    --ring: rgba(10,132,255,.35);
+    --shadow: 0 20px 40px rgba(0,0,0,.35);
+    --radius: 18px;
   }
-  h1 { margin-bottom: 1rem; font-size: 1.5rem; }
-  .day {
-    display: flex; flex-direction: column; align-items: center;
-    background: #fff; margin: 0.5rem auto; padding: 1rem; border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 400px;
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; }
+  body{
+    margin:0;
+    color:var(--text);
+    background:
+      radial-gradient(1000px 600px at 50% -150px, rgba(58,160,255,.18), transparent 60%),
+      radial-gradient(800px 400px at 120% 10%, rgba(10,132,255,.12), transparent 60%),
+      var(--bg);
+    font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  .day span { font-size: 1.2rem; font-weight: 600; margin: 0.2rem 0; }
-  button {
-    font-size: 1rem; background: #007aff; color: #fff; border: none; border-radius: 10px;
-    padding: 0.8rem 1.2rem; margin-top: 0.5rem; -webkit-tap-highlight-color: transparent;
+
+  .wrap{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
   }
-  button:active { transform: scale(0.97); }
-  #reset { margin-top: 1.2rem; background: #ff3b30; padding: 0.85rem 1.4rem; }
+
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    padding: clamp(18px, 4dvh, 28px) 16px 12px;
+    background: linear-gradient(180deg, rgba(11,18,32,.85), rgba(11,18,32,.55) 45%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .hero{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .hero-left h1{
+    margin:0; font-size:1.35rem; letter-spacing:.3px; font-weight:800;
+  }
+  .hero-left p{
+    margin:.35rem 0 0 0; color:var(--muted); font-size:.95rem;
+  }
+  .hero-actions{ display:flex; gap:8px; }
+  .btn{
+    appearance:none; border:none; border-radius:14px; padding:.72rem 1rem;
+    font-weight:700; font-size:.95rem; cursor:pointer;
+    background: var(--primary);
+    color:#fff; box-shadow: var(--shadow);
+  }
+  .btn:active{ transform: scale(.98); }
+  .btn-ghost{
+    background: rgba(255,255,255,.08);
+    color: #cfe4ff;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: none;
+  }
+  .btn-danger{ background: var(--danger); }
+
+  main{
+    padding: 12px 16px 18px;
+    display:flex; flex-direction:column; gap:12px;
+    max-width: 760px; margin: 0 auto;
+  }
+
+  /* Card */
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: var(--shadow);
+    display:flex; align-items:center; gap:14px;
+  }
+  .badge{
+    width:42px; height:42px; border-radius:12px;
+    background: linear-gradient(135deg, rgba(58,160,255,.25), rgba(10,132,255,.1));
+    border: 1px solid rgba(58,160,255,.35);
+    display:grid; place-items:center; flex:0 0 42px;
+    font-size:1.05rem; font-weight:800; color:#dff0ff;
+  }
+  .meta{ flex:1; min-width:0; }
+  .meta h2{
+    margin:0; font-size:1.02rem; font-weight:800; letter-spacing:.2px;
+  }
+  .meta p{
+    margin:.25rem 0 0 0; color:var(--muted); font-size:.88rem;
+  }
+
+  .count{
+    text-align:right; min-width:68px;
+  }
+  .count .n{
+    font-size:1.6rem; font-weight:900; letter-spacing:.3px; line-height:1;
+  }
+  .count .lbl{
+    display:block; font-size:.78rem; color:var(--muted);
+  }
+
+  .action{
+    display:flex; align-items:center; justify-content:center;
+  }
+  .inc-btn{
+    border:none; border-radius:12px; padding:.8rem 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color:#fff; font-weight:900; font-size:1rem; min-width:64px;
+    box-shadow: 0 10px 20px rgba(10,132,255,.35), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .inc-btn:active{ transform: translateY(1px) scale(.99); }
+
+  /* Footer / total */
+  .totals{
+    text-align:center; color:var(--muted); font-size:.92rem; padding: 8px 0 22px;
+  }
+
+  /* Safe area for full-height webapp */
+  @supports (padding: max(0px)) {
+    header{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+    main{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  }
 </style>
 </head>
 <body>
-  <h1>Week Counter</h1>
-  <div id="container"></div>
-  <button id="reset">Reset All</button>
+<div class="wrap">
+  <header>
+    <div class="hero">
+      <div class="hero-left">
+        <h1>Habit Tracker</h1>
+        <p id="subtitle">Tap +1 to log. Works offline.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="export" class="btn btn-ghost" aria-label="Export counters">Export</button>
+        <button id="reset" class="btn btn-danger" aria-label="Reset all counters">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="list" aria-live="polite"></main>
+
+  <div class="totals" id="totals">Total reps: 0</div>
+</div>
 
 <script>
-  (function () {
-    "use strict";
+(function(){
+  "use strict";
 
-    function createSafeStorage() {
-      var memory = {};
-      try {
-        var testKey = "__test__";
-        localStorage.setItem(testKey, "1");
-        localStorage.removeItem(testKey);
-        return {
-          getItem: function (k) { return localStorage.getItem(k); },
-          setItem: function (k, v) { localStorage.setItem(k, v); }
-        };
-      } catch (e) {
-        return {
-          getItem: function (k) { return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : null; },
-          setItem: function (k, v) { memory[k] = String(v); }
-        };
-      }
+  // --- Safe storage for iOS private mode ---
+  function createSafeStorage(){
+    var mem = {};
+    try{
+      var k="__t__"; localStorage.setItem(k,"1"); localStorage.removeItem(k);
+      return {
+        getItem: function(k){ return localStorage.getItem(k); },
+        setItem: function(k,v){ localStorage.setItem(k, v); },
+        removeItem: function(k){ localStorage.removeItem(k); }
+      };
+    }catch(e){
+      return {
+        getItem: function(k){ return Object.prototype.hasOwnProperty.call(mem,k) ? mem[k] : null; },
+        setItem: function(k,v){ mem[k]=String(v); },
+        removeItem: function(k){ delete mem[k]; }
+      };
     }
+  }
+  var storage = createSafeStorage();
 
-    var storage = createSafeStorage();
-    var days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-    var container = document.getElementById("container");
+  // --- Habits (vertical phone-first) ---
+  var habits = [
+    { name: "Cold shower",  icon: "🧊" },
+    { name: "Study",        icon: "📚" },
+    { name: "Read",         icon: "📖" },
+    { name: "Meditation",   icon: "🧘" },
+    { name: "Pray",         icon: "🙏" },
+    { name: "Push-ups",     icon: "💪" }
+  ];
 
-    var counts = {};
-    days.forEach(function (day) {
-      var v = parseInt(storage.getItem(day), 10);
-      counts[day] = isNaN(v) ? 0 : v; // iOS-safe
+  var PREFIX = "pro_hc_";
+  function keyOf(n){ return PREFIX + n; }
+
+  // --- State ---
+  var counts = Object.create(null);
+  habits.forEach(function(h){
+    var v = parseInt(storage.getItem(keyOf(h.name)), 10);
+    counts[h.name] = isNaN(v) ? 0 : v;
+  });
+
+  // --- DOM refs ---
+  var list = document.getElementById("list");
+  var totals = document.getElementById("totals");
+
+  function render(){
+    list.innerHTML = "";
+    var total = 0;
+
+    habits.forEach(function(h){
+      total += counts[h.name];
+
+      var card = document.createElement("article");
+      card.className = "card";
+      card.innerHTML = '' +
+        '<div class="badge" aria-hidden="true">'+ h.icon +'</div>' +
+        '<div class="meta">' +
+          '<h2>'+ h.name +'</h2>' +
+          '<p>'+ (counts[h.name] ? 'Great job! Keep going.' : 'Let’s start with one rep.') +'</p>' +
+        '</div>' +
+        '<div class="count">' +
+          '<div class="n" id="count-'+h.name+'">'+ counts[h.name] +'</div>' +
+          '<span class="lbl">today</span>' +
+        '</div>' +
+        '<div class="action">' +
+          '<button class="inc-btn" data-h="'+ h.name +'" aria-label="Add one to '+h.name+'">+1</button>' +
+        '</div>';
+
+      list.appendChild(card);
     });
 
-    function render() {
-      container.innerHTML = "";
-      days.forEach(function (day) {
-        var div = document.createElement("div");
-        div.className = "day";
-        div.innerHTML =
-          '<span>' + day + '</span>' +
-          '<span id="count-' + day + '">' + counts[day] + '</span>' +
-          '<button data-day="' + day + '" class="inc">+1</button>';
-        container.appendChild(div);
-      });
-      Array.prototype.forEach.call(container.querySelectorAll(".inc"), function (btn) {
-        btn.addEventListener("click", function () {
-          var day = btn.getAttribute("data-day");
-          counts[day] += 1;
-          storage.setItem(day, counts[day]);
-          var el = document.getElementById("count-" + day);
-          if (el) el.textContent = counts[day];
-        }, { passive: true });
-      });
-    }
+    totals.textContent = "Total reps: " + total;
 
-    document.getElementById("reset").addEventListener("click", function () {
-      if (confirm("Reset all counters?")) {
-        days.forEach(function (day) { counts[day] = 0; storage.setItem(day, 0); });
-        render();
-      }
-    }, { passive: true });
+    // attach listeners (single purpose: +1)
+    Array.prototype.forEach.call(list.querySelectorAll(".inc-btn"), function(btn){
+      btn.addEventListener("click", function(){
+        var name = btn.getAttribute("data-h");
+        increment(name);
+      }, { passive:true });
+    });
+  }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", render, { once: true });
-    } else {
+  function increment(name){
+    var next = counts[name] + 1;
+    counts[name] = next;
+    storage.setItem(keyOf(name), next);
+
+    var el = document.getElementById("count-"+name);
+    if (el) el.textContent = next;
+
+    // quick total refresh
+    var t = 0; for (var k in counts) if (Object.prototype.hasOwnProperty.call(counts,k)) t += counts[k];
+    totals.textContent = "Total reps: " + t;
+
+    // gentle haptic (supported on some devices)
+    if (window.navigator && navigator.vibrate) { navigator.vibrate(8); }
+  }
+
+  // Reset all counters
+  document.getElementById("reset").addEventListener("click", function(){
+    if (confirm("Reset all counters?")){
+      habits.forEach(function(h){
+        counts[h.name] = 0;
+        storage.setItem(keyOf(h.name), 0);
+      });
       render();
     }
+  }, { passive:true });
 
-    // Register service worker for offline
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./service-worker.js");
-    }
-  })();
+  // Export (simple text you can copy/share)
+  document.getElementById("export").addEventListener("click", function(){
+    var lines = habits.map(function(h){ return h.name + ": " + counts[h.name]; });
+    alert(lines.join("\n"));
+  }, { passive:true });
+
+  // Initial paint
+  if (document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", render, { once:true });
+  } else { render(); }
+
+  // PWA offline
+  if ("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./service-worker.js");
+  }
+})();
 </script>
 </body>
 </html>
