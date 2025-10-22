@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Week Counter</title>
+
+<!-- PWA bits -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#007aff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #f7f9fc;
+    margin: 0;
+    padding: 1rem;
+    text-align: center;
+  }
+  h1 { margin-bottom: 1rem; font-size: 1.5rem; }
+  .day {
+    display: flex; flex-direction: column; align-items: center;
+    background: #fff; margin: 0.5rem auto; padding: 1rem; border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 400px;
+  }
+  .day span { font-size: 1.2rem; font-weight: 600; margin: 0.2rem 0; }
+  button {
+    font-size: 1rem; background: #007aff; color: #fff; border: none; border-radius: 10px;
+    padding: 0.8rem 1.2rem; margin-top: 0.5rem; -webkit-tap-highlight-color: transparent;
+  }
+  button:active { transform: scale(0.97); }
+  #reset { margin-top: 1.2rem; background: #ff3b30; padding: 0.85rem 1.4rem; }
+</style>
+</head>
+<body>
+  <h1>Week Counter</h1>
+  <div id="container"></div>
+  <button id="reset">Reset All</button>
+
+<script>
+  (function () {
+    "use strict";
+
+    function createSafeStorage() {
+      var memory = {};
+      try {
+        var testKey = "__test__";
+        localStorage.setItem(testKey, "1");
+        localStorage.removeItem(testKey);
+        return {
+          getItem: function (k) { return localStorage.getItem(k); },
+          setItem: function (k, v) { localStorage.setItem(k, v); }
+        };
+      } catch (e) {
+        return {
+          getItem: function (k) { return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : null; },
+          setItem: function (k, v) { memory[k] = String(v); }
+        };
+      }
+    }
+
+    var storage = createSafeStorage();
+    var days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    var container = document.getElementById("container");
+
+    var counts = {};
+    days.forEach(function (day) {
+      var v = parseInt(storage.getItem(day), 10);
+      counts[day] = isNaN(v) ? 0 : v; // iOS-safe
+    });
+
+    function render() {
+      container.innerHTML = "";
+      days.forEach(function (day) {
+        var div = document.createElement("div");
+        div.className = "day";
+        div.innerHTML =
+          '<span>' + day + '</span>' +
+          '<span id="count-' + day + '">' + counts[day] + '</span>' +
+          '<button data-day="' + day + '" class="inc">+1</button>';
+        container.appendChild(div);
+      });
+      Array.prototype.forEach.call(container.querySelectorAll(".inc"), function (btn) {
+        btn.addEventListener("click", function () {
+          var day = btn.getAttribute("data-day");
+          counts[day] += 1;
+          storage.setItem(day, counts[day]);
+          var el = document.getElementById("count-" + day);
+          if (el) el.textContent = counts[day];
+        }, { passive: true });
+      });
+    }
+
+    document.getElementById("reset").addEventListener("click", function () {
+      if (confirm("Reset all counters?")) {
+        days.forEach(function (day) { counts[day] = 0; storage.setItem(day, 0); });
+        render();
+      }
+    }, { passive: true });
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", render, { once: true });
+    } else {
+      render();
+    }
+
+    // Register service worker for offline
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+  })();
+</script>
+</body>
+</html>
