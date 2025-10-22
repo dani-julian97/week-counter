@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Habit Tracker</title>
 
-<!-- PWA bits (keep your manifest + service worker files as before) -->
+<!-- PWA bits -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a84ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,11 +17,12 @@
     --bg: #0b1220;
     --bg-soft: #0f1a2f;
     --card: #121b31;
-    --card-2: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
     --text: #e8eef9;
     --muted: #9fb0c9;
     --primary: #0a84ff;
     --primary-2: #3aa0ff;
+    --success: #17c964;
+    --success-2: #0fb85a;
     --danger: #ff3b30;
     --ring: rgba(10,132,255,.35);
     --shadow: 0 20px 40px rgba(0,0,0,.35);
@@ -50,10 +51,11 @@
     position:sticky;
     top:0;
     z-index:10;
-    padding: clamp(18px, 4dvh, 28px) 16px 12px;
+    padding: clamp(18px, 4dvh, 28px) 16px 10px;
     background: linear-gradient(180deg, rgba(11,18,32,.85), rgba(11,18,32,.55) 45%, transparent);
     backdrop-filter: blur(6px);
   }
+
   .hero{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
   }
@@ -67,25 +69,58 @@
   .btn{
     appearance:none; border:none; border-radius:14px; padding:.72rem 1rem;
     font-weight:700; font-size:.95rem; cursor:pointer;
-    background: var(--primary);
-    color:#fff; box-shadow: var(--shadow);
+    background: var(--primary); color:#fff; box-shadow: var(--shadow);
   }
   .btn:active{ transform: scale(.98); }
   .btn-ghost{
-    background: rgba(255,255,255,.08);
-    color: #cfe4ff;
-    border: 1px solid rgba(255,255,255,.08);
-    box-shadow: none;
+    background: rgba(255,255,255,.08); color: #cfe4ff;
+    border: 1px solid rgba(255,255,255,.08); box-shadow: none;
   }
   .btn-danger{ background: var(--danger); }
 
+  /* Level row */
+  .level{
+    margin-top:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+  }
+  .level-top{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin-bottom:8px;
+  }
+  .level-title{
+    font-weight:800; letter-spacing:.2px; font-size:.98rem;
+  }
+  .level-sub{ color:var(--muted); font-size:.86rem; }
+  .dots{
+    display:grid; grid-template-columns: repeat(10, 1fr);
+    gap:8px; align-items:center;
+  }
+  .dot{
+    width:22px; height:22px; border-radius:50%;
+    border: 2px solid rgba(255,255,255,.18);
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+  .dot.filled{
+    border-color: rgba(23,201,100,.3);
+    background: radial-gradient(11px 11px at 30% 30%, rgba(255,255,255,.7), rgba(255,255,255,.15) 35%, transparent 60%),
+                linear-gradient(135deg, var(--success), var(--success-2));
+    box-shadow:
+      0 6px 16px rgba(23,201,100,.35),
+      inset 0 1px 0 rgba(255,255,255,.45);
+  }
+
   main{
-    padding: 12px 16px 18px;
+    padding: 10px 16px 18px;
     display:flex; flex-direction:column; gap:12px;
     max-width: 760px; margin: 0 auto;
   }
 
-  /* Card */
+  /* Cards */
   .card{
     background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
     border: 1px solid rgba(255,255,255,.06);
@@ -108,20 +143,10 @@
   .meta p{
     margin:.25rem 0 0 0; color:var(--muted); font-size:.88rem;
   }
-
-  .count{
-    text-align:right; min-width:68px;
-  }
-  .count .n{
-    font-size:1.6rem; font-weight:900; letter-spacing:.3px; line-height:1;
-  }
-  .count .lbl{
-    display:block; font-size:.78rem; color:var(--muted);
-  }
-
-  .action{
-    display:flex; align-items:center; justify-content:center;
-  }
+  .count{ text-align:right; min-width:68px; }
+  .count .n{ font-size:1.6rem; font-weight:900; letter-spacing:.3px; line-height:1; }
+  .count .lbl{ display:block; font-size:.78rem; color:var(--muted); }
+  .action{ display:flex; align-items:center; justify-content:center; }
   .inc-btn{
     border:none; border-radius:12px; padding:.8rem 1rem;
     background: linear-gradient(135deg, var(--primary), var(--primary-2));
@@ -135,7 +160,24 @@
     text-align:center; color:var(--muted); font-size:.92rem; padding: 8px 0 22px;
   }
 
-  /* Safe area for full-height webapp */
+  /* Toast */
+  .toast{
+    position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(120%);
+    background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.05));
+    border: 1px solid rgba(255,255,255,.12);
+    color: #e6fff2;
+    padding: .9rem 1.1rem; border-radius: 14px; box-shadow: var(--shadow);
+    font-weight: 700; letter-spacing: .2px; z-index: 9999;
+    transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s;
+    opacity: 0;
+  }
+  .toast.show{
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Safe areas */
   @supports (padding: max(0px)) {
     header{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
     main{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
@@ -155,12 +197,24 @@
         <button id="reset" class="btn btn-danger" aria-label="Reset all counters">Reset</button>
       </div>
     </div>
+
+    <!-- Level progress row -->
+    <section class="level" aria-label="Level progress">
+      <div class="level-top">
+        <div class="level-title">Level <span id="levelNum">0</span> / 10</div>
+        <div class="level-sub" id="levelHint">Raise every habit to advance</div>
+      </div>
+      <div class="dots" id="dots" role="progressbar" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" aria-label="Level dots"></div>
+    </section>
   </header>
 
   <main id="list" aria-live="polite"></main>
 
   <div class="totals" id="totals">Total reps: 0</div>
 </div>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite">Well done! Level up 🎉</div>
 
 <script>
 (function(){
@@ -206,11 +260,72 @@
     counts[h.name] = isNaN(v) ? 0 : v;
   });
 
+  // Level is the minimum across all habits, capped at 10
+  function computeLevel(){
+    var min = Infinity;
+    for (var i=0;i<habits.length;i++){
+      var n = counts[habits[i].name] || 0;
+      if (n < min) min = n;
+    }
+    if (!isFinite(min)) min = 0;
+    if (min < 0) min = 0;
+    if (min > 10) min = 10;
+    return min;
+  }
+
+  var LEVEL_KEY = PREFIX + "level_seen";
+  var lastSeenLevel = parseInt(storage.getItem(LEVEL_KEY), 10);
+  if (isNaN(lastSeenLevel)) lastSeenLevel = computeLevel();
+
   // --- DOM refs ---
-  var list = document.getElementById("list");
+  var list   = document.getElementById("list");
   var totals = document.getElementById("totals");
+  var dotsEl = document.getElementById("dots");
+  var levelNumEl = document.getElementById("levelNum");
+  var toastEl = document.getElementById("toast");
+
+  // Build 10 dots
+  function buildDots(){
+    dotsEl.innerHTML = "";
+    for (var i=0;i<10;i++){
+      var d = document.createElement("div");
+      d.className = "dot";
+      d.setAttribute("aria-hidden","true");
+      dotsEl.appendChild(d);
+    }
+  }
+
+  function updateLevelUI(){
+    var level = computeLevel();
+    levelNumEl.textContent = level;
+    dotsEl.setAttribute("aria-valuenow", String(level));
+    var children = dotsEl.children;
+    for (var i=0;i<children.length;i++){
+      if (i < level) children[i].classList.add("filled");
+      else children[i].classList.remove("filled");
+    }
+  }
+
+  function maybeLevelUpToast(){
+    var current = computeLevel();
+    if (current > lastSeenLevel){
+      showToast("Well done! Level " + current + " unlocked 🎉");
+      lastSeenLevel = current;
+      storage.setItem(LEVEL_KEY, current);
+    }
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg || "Well done! Level up 🎉";
+    toastEl.classList.add("show");
+    setTimeout(function(){ toastEl.classList.remove("show"); }, 1800);
+    if (navigator.vibrate) { navigator.vibrate(12); }
+  }
 
   function render(){
+    buildDots();
+    updateLevelUI();
+
     list.innerHTML = "";
     var total = 0;
 
@@ -238,7 +353,6 @@
 
     totals.textContent = "Total reps: " + total;
 
-    // attach listeners (single purpose: +1)
     Array.prototype.forEach.call(list.querySelectorAll(".inc-btn"), function(btn){
       btn.addEventListener("click", function(){
         var name = btn.getAttribute("data-h");
@@ -248,41 +362,52 @@
   }
 
   function increment(name){
-    var next = counts[name] + 1;
+    var next = (counts[name] || 0) + 1;
     counts[name] = next;
     storage.setItem(keyOf(name), next);
 
     var el = document.getElementById("count-"+name);
     if (el) el.textContent = next;
 
-    // quick total refresh
+    // Refresh total
     var t = 0; for (var k in counts) if (Object.prototype.hasOwnProperty.call(counts,k)) t += counts[k];
     totals.textContent = "Total reps: " + t;
 
-    // gentle haptic (supported on some devices)
-    if (window.navigator && navigator.vibrate) { navigator.vibrate(8); }
+    // Level check
+    var before = parseInt(levelNumEl.textContent, 10) || 0;
+    updateLevelUI();
+    var after = computeLevel();
+    if (after > before) { maybeLevelUpToast(); }
+
+    if (navigator.vibrate) { navigator.vibrate(8); }
   }
 
-  // Reset all counters
+  // Reset all counters + level
   document.getElementById("reset").addEventListener("click", function(){
     if (confirm("Reset all counters?")){
       habits.forEach(function(h){
         counts[h.name] = 0;
         storage.setItem(keyOf(h.name), 0);
       });
+      storage.setItem(LEVEL_KEY, 0);
+      lastSeenLevel = 0;
       render();
+      showToast("All counters reset");
     }
   }, { passive:true });
 
   // Export (simple text you can copy/share)
   document.getElementById("export").addEventListener("click", function(){
     var lines = habits.map(function(h){ return h.name + ": " + counts[h.name]; });
+    lines.push("Level: " + computeLevel() + "/10");
     alert(lines.join("\n"));
   }, { passive:true });
 
   // Initial paint
   if (document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", render, { once:true });
+    document.addEventListener("DOMContentLoaded", function(){
+      render();
+    }, { once:true });
   } else { render(); }
 
   // PWA offline
